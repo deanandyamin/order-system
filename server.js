@@ -105,4 +105,5 @@ app.post('/submit-order', (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, "0.0.0.0", () => {
     console.log(`伺服器運行中：http://0.0.0.0:${port}`);
+    
 });
