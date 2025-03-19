@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>訂單監控</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h2 {
+            color: #333;
+        }
+        .order-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .order {
+            border-bottom: 1px solid #ccc;
+            padding: 10px;
+            text-align: left;
+            position: relative;
+        }
+        .order:last-child {
+            border-bottom: none;
+        }
+        .order strong {
+            color: #007BFF;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: gray;
+        }
+
+        /* 訂單完成後的灰色樣式 */
+        .completed {
+            background-color: #d3d3d3 !important;
+            color: #777 !important;
+            text-decoration: line-through;
+        }
+
+.delete-btn {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 14px;
+  background: #dc3545; /* 紅色 */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: 5px;
+}
+.delete-btn:hover {
+  background: #c82333;
+}
+
+        /* 訂單已付款後的淡綠色樣式 */
+        .paid {
+            background-color: #d7fadc !important;
+        }
+
+        /* 讓「桌號」和「按鈕」在同一行 */
+        .order-header {
+            display: flex;
+            align-items: center; /* 垂直置中 */
+            justify-content: space-between; /* 兩端對齊 */
+        }
+        .order-header p {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* 已付款按鈕（淡藍色） */
+        .pay-btn {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            font-size: 14px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pay-btn:hover {
+            background: #128996;
+        }
+
+        /* 完成按鈕（深橘色） */
+        .complete-btn {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            font-size: 14px;
+            background: #f57c00;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+            margin-left: 5px; /* 與已付款按鈕稍微留點距 */
+        }
+        .complete-btn:hover {
+            background: #e64a19;
+        }
+
+        /* 小通知 (右上提示) */
+        .notification {
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 36px;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* 自訂彈窗（若有需要可使用） */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .modal-content p {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h2>即時訂單監控</h2>
+    <!-- 訂單清單容器 -->
+    <div class="order-container" id="orderList">
+        <p>載入中...</p>
+    </div>
+
+    <!-- 啟用音效按鈕：使用者必須點擊後才允許自動播放 -->
+    <button id="enableSoundBtn" style="margin-top: 20px;">啟用音效</button>
+
+    <!-- 音效檔案（請確認 /sounds/notification.mp3 存在） -->
+    <audio id="notificationSound">
+        <source src="/sounds/notification.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        /*
+           記錄目前已知的訂單 ID。若出現新 ID (舊列表沒有)，就判定有新訂單。
+           若已啟用音效，則播放提示音。
+        */
+        let knownOrderIds = [];
+
+        // 取得音效元素
+        let notificationSound = document.getElementById("notificationSound");
+        let enableSoundBtn = document.getElementById("enableSoundBtn");
+
+        // 綁定啟用音效按鈕
+        enableSoundBtn.addEventListener("click", () => {
+            notificationSound.play()
+            .then(() => {
+                console.log("音效已啟用");
+                enableSoundBtn.style.display = "none"; // 隱藏按鈕
+            })
+            .catch(err => {
+                console.warn("音效啟用失敗：", err);
+            });
+        });
+
+        /* 每次向 /orders 取得訂單 */
+        function fetchOrders() {
+            fetch('/orders')
+                .then(response => response.json())
+                .then(data => {
+                    let orderList = document.getElementById("orderList");
+                    orderList.innerHTML = "";
+
+                    // 若沒有訂單
+                    if (!data || data.length === 0) {
+                        orderList.innerHTML = "<p>目前沒有訂單</p>";
+                        knownOrderIds = [];
+                        return;
+                    }
+
+                    // 取得這次訂單 ID
+                    let currentIds = data.map(o => o.id);
+
+                    // 判斷是否出現新訂單
+                    let hasNewOrder = currentIds.some(id => !knownOrderIds.includes(id));
+                    // 更新 knownOrderIds
+                    knownOrderIds = currentIds;
+
+                    // 若有新訂單，且已啟用音效，則播放
+                    if (hasNewOrder && enableSoundBtn.style.display === "none") {
+                        notificationSound.play().catch(err => {
+                            console.warn("播放音效失敗：", err);
+                        });
+                    }
+
+                    // 將訂單反轉，讓最新的在最上面
+                    data.reverse().forEach(order => {
+                        let orderDiv = document.createElement("div");
+                        orderDiv.classList.add("order");
+
+                        // 狀態：完成 => 灰色 + 刪除線
+                        //      已付款(但未完成) => 淡綠色
+                        if (order.completed) {
+                            orderDiv.classList.add("completed");
+                        } else if (order.paid) {
+                            orderDiv.classList.add("paid");
+                        }
+
+                        // 訂單內容
+                        let totalPrice = order.items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+                        orderDiv.innerHTML = `
+                            <div class="order-header">
+                                <p><strong>桌號：</strong> ${order.table}</p>
+                                ${
+                                    // 若已完成，不顯示任何按鈕
+                                    order.completed
+                                    ? ""
+                                    : `
+                                      ${
+                                        // 若未付款，顯示已付款按鈕
+                                        !order.paid
+                                        ? `<button class="pay-btn" onclick="payOrder(${order.id})">已付款</button>`
+                                        : ""
+                                      }
+                                      <button class="complete-btn" onclick="completeOrder(${order.id})">完成</button>
+ <!-- ✅ 在這裡新增「刪除」按鈕 -->
+        <button class="delete-btn" onclick="deleteOrder(${order.id})">刪除</button>
+                                    `
+                                }
+                            </div>
+                            <p><strong>餐點：</strong> ${
+                                order.items
+                                    .map(item => `${item.name}($${item.price}) x ${item.quantity || 1}`)
+                                    .join("，")
+                            }</p>
+                            <p><strong>總金額：</strong> $${totalPrice}</p>
+                            <p class="timestamp"><strong>訂單接收時間：</strong> ${order.receivedTime}</p>
+                        `;
+                        orderList.appendChild(orderDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error("❌ 訂單載入失敗", error);
+                    document.getElementById("orderList").innerHTML = "<p>載入失敗，請重試</p>";
+                });
+        }
+
+        /* 標記訂單「已付款」 */
+        function payOrder(orderId) {
+            fetch(`/pay-order/${orderId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    fetchOrders(); // 重新抓取訂單以更新畫面
+                })
+                .catch(error => console.error("訂單付款錯誤:", error));
+        }
+
+        /* 標記訂單「完成」 */
+        function completeOrder(orderId) {
+            fetch(`/complete-order/${orderId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    fetchOrders(); // 重新抓取訂單以更新畫面
+                })
+                .catch(error => console.error("訂單完成錯誤:", error));
+        }
+
+        // 每 2 秒自動刷新一次
+        setInterval(fetchOrders, 2000);
+
+        // 頁面載入後，立即抓一次訂單
+        fetchOrders();
+
+  /* 其他既有程式... */
+
+  function deleteOrder(orderId) {
+    // 呼叫後端刪除訂單 API
+    fetch(`/delete-order/${orderId}`, { method: 'DELETE' })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data.message);
+        fetchOrders(); // 刪除成功後重新抓取訂單更新畫面
+      })
+      .catch(error => console.error("刪除訂單錯誤:", error));
+  }
+    </script>
+</body>
+</html>
