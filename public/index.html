@@ -54,7 +54,7 @@
       max-width: 100%;
       object-fit: contain;
     }
-    /* 類別選單區：位於 Logo 下方，高度 50px */
+    /* 類別選單區：位於 Logo 下方白色框 */
     .top-bar {
       height: 100px;
       display: flex;
@@ -63,11 +63,13 @@
       overflow-x: auto;
       margin-bottom: 10px;
     }
+
+ /* 類別選單區按鈕的編排▼ */
     .category-group {
       display: grid;
       grid-template-rows: repeat(2, 1fr);
-      gap: 25px;
-      padding: 10px 25px;
+      gap: 20px;
+      padding: 10px 10px;
       align-items: center;
       justify-content: center;
     }
@@ -78,10 +80,12 @@
     }
     .category-group .row-2 {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 25px;
       justify-content: center;
     }
+ /* 類別選單區按鈕的編排▲ */
+
     .category-btn {
       padding: 8px 15px;
       border: none;
@@ -122,15 +126,15 @@
       max-width: 1200px;
       margin-left: auto;
     }
-    .menu-item {
-      background: var(--white);
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: transform var(--transition-fast);
-    }
+   .menu-item {
+  background: var(--white);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform var(--transition-fast);
+transform: translateX(15px); /* 或根據需要調整為 5-10px */
+}
     .menu-item:hover {
       transform: translateY(-2px);
       background: var(--bg-color);
@@ -164,10 +168,12 @@
        ========================= */
     .order-mode-container {
       margin: 20px auto 0;
-      padding: 10px 20px;
+      padding: 10px 22px;
       background: rgba(255, 255, 255, 0.95);
       box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
       max-width: 1200px;
+      /* 新增這行，向右移動 */
+       transform: translateX(12px);
     }
     .order-mode-buttons {
       display: flex;
@@ -240,12 +246,6 @@
        並加入 margin-top 以與上方區塊分隔
        ========================= */
     #cart {
-      /* 修改前：
-      position: fixed;
-      left: 0;
-      bottom: 0;
-      max-height: 40vh;
-      */
       width: 100%;
       background: var(--cart-bg);
       padding: 20px;
@@ -271,12 +271,12 @@
       padding: 5px;
       border-bottom: 1px solid var(--border-color);
     }
-    /* 將累計總金額與文字連結在一起，移除多餘空格 */
+
     #cartList li:last-child {
       border-bottom: none;
       font-weight: bold;
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start; /* 改為靠左排列 */
       align-items: center;
     }
     .total-price {
@@ -389,7 +389,8 @@
       margin: 0;
     }
     #categoryTitle {
-      text-align: center;
+   text-align: center;
+padding-left: 22px;
     }
     #submitOrderBtn {
       margin-left: 10px;
